@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0E14" />
+<title>WeFee — datos cerca de ti</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/13.3.0/stellar-sdk.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0A0E14; --bar:#0C1016; --card:#161B23; --card-hi:#1E242E;
+    --line:#282E36; --txt:#F0F3F6; --dim:#94A0AC;
+    --coral:#FF5A36; --green:#2ECC71; --gold:#FFB020; --blue:#4A90FF;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--bg); color:var(--txt);}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh; padding-bottom:calc(84px + env(safe-area-inset-bottom));
+    background-image:
+      linear-gradient(110deg, transparent 49.7%, rgba(255,255,255,.035) 50%, transparent 50.3%);
+    background-size:90px 100%;
+  }
+  h1,h2,h3,.brand{font-family:'Poppins','Inter',sans-serif;}
+
+  header{
+    position:sticky; top:0; z-index:5; background:var(--bar);
+    border-bottom:1px solid var(--line); padding:14px 20px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand{font-size:24px; font-weight:700; letter-spacing:-.01em;}
+  .brand span{color:var(--coral);}
+  .avatar-btn{
+    width:36px; height:36px; border-radius:50%; border:1.5px solid var(--dim);
+    color:var(--dim); display:grid; place-items:center; font-weight:600; font-size:14px;
+  }
+
+  main{max-width:520px; margin:0 auto; padding:18px 18px 8px;}
+  .vista{display:none;} .vista.activa{display:block;}
+  h2{font-size:20px; margin:6px 0 4px;}
+  .sub{color:var(--dim); font-size:14px; margin:0 0 16px;}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:18px; margin-bottom:14px;
+  }
+  .row{display:flex; align-items:center; gap:14px;}
+  .ava{
+    width:52px; height:52px; border-radius:50%; background:var(--card-hi);
+    display:grid; place-items:center; flex:none; color:var(--dim); font-weight:600;
+  }
+  .name{font-family:'Poppins',sans-serif; font-weight:600; font-size:17px;}
+  .stars{color:var(--gold); font-size:13px; letter-spacing:1px;}
+  .stars small{color:var(--dim); letter-spacing:0; margin-left:6px;}
+  .meta{color:var(--dim); font-size:14px; margin:12px 0 0;}
+  .price{font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; margin:6px 0 0;}
+  .price small{font-size:14px; color:var(--dim); font-weight:600;}
+  hr{border:0; border-top:1px solid var(--line); margin:14px 0;}
+
+  button.cta{
+    width:100%; margin-top:14px; border:0; border-radius:14px; padding:15px;
+    background:var(--coral); color:#140A08; font-family:'Poppins',sans-serif;
+    font-weight:600; font-size:16px; cursor:pointer; transition:transform .08s, background .2s;
+  }
+  button.cta:active{transform:scale(.98); background:#C8462A;}
+  button.cta:disabled{opacity:.55; cursor:default;}
+  .estado{font-size:13px; margin:10px 0 0; min-height:18px; color:var(--dim);}
+  .estado.ok{color:var(--green);}
+  .estado.err{color:var(--coral);}
+
+  label{display:block; font-size:13px; color:var(--dim); margin:14px 0 6px;}
+  input{
+    width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card-hi); color:var(--txt); font-size:16px; font-family:inherit;
+  }
+  input:focus{outline:2px solid var(--blue); outline-offset:1px;}
+
+  .vacio{text-align:center; padding:44px 12px; color:var(--dim); font-size:14px;}
+  .spinner{
+    width:26px; height:26px; border-radius:50%; margin:0 auto 12px;
+    border:3px solid var(--line); border-top-color:var(--coral); animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* En construcción */
+  .badge{
+    display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:999px;
+    border:1.5px solid var(--coral); color:var(--coral); font-family:'Poppins',sans-serif;
+    font-weight:600; font-size:12px; letter-spacing:.06em;
+  }
+  .badge i{width:8px; height:8px; border-radius:50%; background:var(--coral); animation:blink 1.2s infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+  .wire{
+    border:1.5px dashed #46505E; border-radius:16px; height:190px; margin:16px 0;
+    display:grid; place-items:center; text-align:center; color:var(--dim);
+    background:repeating-linear-gradient(135deg,#10151C 0 14px,#141A22 14px 28px);
+  }
+  .wire b{font-family:'Poppins',sans-serif; font-size:20px;}
+  .prog{margin:18px 0;}
+  .prog .l{display:flex; justify-content:space-between; font-size:14px; margin-bottom:8px;}
+  .prog .l span:last-child{color:var(--coral); font-family:'Poppins',sans-serif; font-weight:600;}
+  .bar{height:10px; border-radius:6px; background:var(--line); overflow:hidden;}
+  .bar div{height:100%; background:var(--coral); border-radius:6px;}
+
+  nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:6; background:var(--bar);
+    border-top:1px solid var(--line); display:flex; padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    flex:1; background:none; border:0; color:var(--dim); font-family:inherit; font-size:12px;
+    padding:8px 4px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  nav button .ic{font-size:20px; line-height:1;}
+  nav button.activa{color:var(--coral);}
+
+  #modalNombre{
+    position:fixed; inset:0; z-index:20; background:rgba(10,14,20,.97);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .caja{max-width:360px; width:100%; text-align:center;}
+  .logo{
+    width:84px; height:84px; border-radius:22px; background:var(--coral); color:#140A08;
+    display:grid; place-items:center; font-family:'Poppins',sans-serif; font-weight:700;
+    font-size:46px; margin:0 auto 18px;
+  }
+  .caja h1{margin:0 0 6px; font-size:30px;}
+  .caja p{color:var(--dim); font-size:14px; margin:0 0 18px;}
+  .caja input{text-align:center;}
+</style>
+</head>
+<body>
+
+<div id="modalNombre">
+  <div class="caja">
+    <div class="logo">W</div>
+    <h1>WeFee</h1>
+    <p>Comparte lo que te sobra. Pide datos cerca de ti.<br>Piloto en testnet, sin dinero real.</p>
+    <input id="inputNombre" placeholder="¿Cómo te llamas?" autocomplete="given-name" />
+    <button class="cta" id="btnEntrar">Entrar</button>
+    <p id="errorEntrada" class="estado err"></p>
+  </div>
+</div>
+
+<header>
+  <div class="brand">We<span>Fee</span></div>
+  <div class="avatar-btn" id="avatarBtn">A</div>
+</header>
+
+<div id="demoBanner" style="display:none;background:#2a1a14;color:#ff8a66;font:600 12px Inter,sans-serif;text-align:center;padding:6px">MODO DEMO · datos locales y pago simulado</div>
+<main>
+  <section id="vista-ofertas" class="vista activa">
+    <h2>Cerca de ti ahora</h2>
+    <p class="sub">Estudiantes que comparten su conexión.</p>
+    <div id="listaOfertas"><div class="vacio"><div class="spinner"></div>Buscando ofertas…</div></div>
+  </section>
+
+  <section id="vista-publicar" class="vista">
+    <h2>Comparte lo que te sobra</h2>
+    <p class="sub">Publica tu oferta y gana mientras estudias.</p>
+    <div class="card">
+      <label for="inputUbicacion">¿Dónde estás?</label>
+      <input id="inputUbicacion" placeholder="Ej. Bloque F, cafetería" maxlength="80" />
+      <label for="inputPrecio">Precio por sesión (XLM)</label>
+      <input id="inputPrecio" type="number" min="0.1" step="0.1" placeholder="Ej. 2" />
+      <button class="cta" id="btnPublicar">Publicar oferta</button>
+      <p id="mensajePublicar" class="estado"></p>
+    </div>
+  </section>
+
+  <section id="vista-pronto" class="vista">
+    <span class="badge"><i></i>EN CONSTRUCCIÓN</span>
+    <h2 style="margin-top:14px">Lo que viene</h2>
+    <p class="sub">Esto todavía no funciona, y por eso lo mostramos.</p>
+    <div class="wire"><div><b>Mapa en vivo</b><br>boceto de la próxima versión</div></div>
+    <div class="prog"><div class="l"><span>Radar de proximidad (Bluetooth)</span><span>45%</span></div><div class="bar"><div style="width:45%"></div></div></div>
+    <div class="prog"><div class="l"><span>Hotspot automático</span><span>25%</span></div><div class="bar"><div style="width:25%"></div></div></div>
+    <div class="prog"><div class="l"><span>Pago en custodia (Soroban)</span><span>60%</span></div><div class="bar"><div style="width:60%"></div></div></div>
+  </section>
+</main>
+
+<nav>
+  <button data-vista="ofertas" class="activa"><span class="ic">◉</span>Cerca</button>
+  <button data-vista="publicar"><span class="ic">＋</span>Compartir</button>
+  <button data-vista="pronto"><span class="ic">◌</span>Pronto</button>
+</nav>
+
+<script>
+const SUPABASE_URL = "https://TU-PROYECTO.supabase.co"; // reemplaza con la URL de tu proyecto
+const SUPABASE_KEY = "TU-ANON-KEY";                      // reemplaza con tu anon/publishable key
+// Si no has puesto tus claves, la app corre en MODO DEMO (datos locales, pago simulado).
+const CONTRACT_ID = "TU-CONTRACT-ID"; // dirección C… del contrato wefee-escrow desplegado en testnet (ver DEPLOY_CONTRATO.md)
+const ESCROW = !CONTRACT_ID.includes("TU-CONTRACT"); // con contrato: pago en custodia; sin él: pago directo
+const DEMO = SUPABASE_URL.includes("TU-PROYECTO");
+const sb = (DEMO || typeof supabase === "undefined") ? null : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const DEMO_OFERTAS = [
+  { id:"d1", usuario_id:"u1", ubicacion:"Biblioteca Karl Parrish", precio_xlm:2, usuarios:{nombre:"Carlos M.", calificacion_promedio:4.9} },
+  { id:"d2", usuario_id:"u2", ubicacion:"Parada Calle 84", precio_xlm:1.5, usuarios:{nombre:"Valentina R.", calificacion_promedio:4.8} },
+  { id:"d3", usuario_id:"u3", ubicacion:"Cafetería Bloque G", precio_xlm:3, usuarios:{nombre:"Sebastián P.", calificacion_promedio:5} }
+];
+function demoGet(){ try{ return JSON.parse(localStorage.getItem("wefee_demo_ofertas")||"[]"); }catch(e){ return []; } }
+
+// Según la versión del SDK puede ser StellarSdk.Horizon.Server o StellarSdk.Server
+const horizon = (typeof StellarSdk !== "undefined") ? new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org") : null;
+
+const rpc = (typeof StellarSdk !== "undefined") ? new StellarSdk.rpc.Server("https://soroban-testnet.stellar.org") : null;
+let usuarioActual = null;
+
+// ---------- Contrato de custodia (Soroban) ----------
+async function llamarContrato(metodo, args){
+  const cuenta = await rpc.getAccount(usuarioActual.stellar_public_key);
+  let tx = new StellarSdk.TransactionBuilder(cuenta, { fee: "1000000", networkPassphrase: StellarSdk.Networks.TESTNET })
+    .addOperation(new StellarSdk.Contract(CONTRACT_ID).call(metodo, ...args))
+    .setTimeout(60).build();
+  tx = await rpc.prepareTransaction(tx);          // simula y añade recursos/fees
+  tx.sign(StellarSdk.Keypair.fromSecret(usuarioActual.secret));
+  const env = await rpc.sendTransaction(tx);
+  if (env.status === "ERROR") throw new Error("El contrato rechazó la transacción");
+  let r = await rpc.getTransaction(env.hash);
+  for (let i = 0; i < 30 && r.status === "NOT_FOUND"; i++){ await new Promise(x => setTimeout(x, 1000)); r = await rpc.getTransaction(env.hash); }
+  if (r.status !== "SUCCESS") throw new Error("La transacción falló en la red (" + r.status + ")");
+  return { hash: env.hash, valor: r.returnValue ? StellarSdk.scValToNative(r.returnValue) : null };
+}
+const aStroops = (xlm) => BigInt(Math.round(Number(xlm) * 1e7));
+
+const $ = (id) => document.getElementById(id);
+function esc(s){ const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+function estrellas(n){ const r = Math.round(n || 5); return "★".repeat(r) + "☆".repeat(5 - r); }
+
+// ---------- Arranque ----------
+function iniciar(){
+  if (DEMO) $("demoBanner").style.display = "block";
+  try { usuarioActual = JSON.parse(localStorage.getItem("wefee_usuario") || "null"); } catch(e){ usuarioActual = null; }
+  if (usuarioActual){
+    $("modalNombre").style.display = "none";
+    $("avatarBtn").textContent = (usuarioActual.nombre || "A")[0].toUpperCase();
+    cargarOfertas();
+  }
+}
+
+$("btnEntrar").onclick = async () => {
+  const nombre = $("inputNombre").value.trim();
+  const err = $("errorEntrada");
+  if (!nombre){ err.textContent = "Escribe tu nombre."; return; }
+  err.className = "estado"; err.textContent = "Creando tu cuenta de prueba…";
+  try {
+    if (DEMO){
+      usuarioActual = { id:"yo", nombre, stellar_public_key:"DEMO", secret:"" };
+      localStorage.setItem("wefee_usuario", JSON.stringify(usuarioActual));
+      $("modalNombre").style.display = "none"; $("avatarBtn").textContent = nombre[0].toUpperCase();
+      $("demoBanner").style.display = "block"; cargarOfertas(); return;
+    }
+    const { data: authData, error: authError } = await sb.auth.signInAnonymously();
+    if (authError) throw authError;
+
+    const kp = StellarSdk.Keypair.random();
+    await fetch(`https://friendbot.stellar.org?addr=${kp.publicKey()}`);
+
+    const { data: usuario, error: dbError } = await sb.from("usuarios").insert({
+      auth_id: authData.user.id, nombre, rol: "ambos", stellar_public_key: kp.publicKey()
+    }).select().single();
+    if (dbError) throw dbError;
+
+    usuarioActual = { ...usuario, secret: kp.secret() };
+    localStorage.setItem("wefee_usuario", JSON.stringify(usuarioActual));
+    $("modalNombre").style.display = "none";
+    $("avatarBtn").textContent = nombre[0].toUpperCase();
+    cargarOfertas();
+  } catch (e) {
+    err.className = "estado err"; err.textContent = "Algo falló: " + e.message;
+  }
+};
+
+// ---------- Navegación ----------
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("activa"));
+    document.querySelectorAll(".vista").forEach(v => v.classList.remove("activa"));
+    btn.classList.add("activa");
+    $("vista-" + btn.dataset.vista).classList.add("activa");
+    if (btn.dataset.vista === "ofertas") cargarOfertas();
+  };
+});
+
+// ---------- Ofertas ----------
+async function cargarOfertas(){
+  const cont = $("listaOfertas");
+  if (DEMO){ return pintarOfertas([...demoGet(), ...DEMO_OFERTAS]); }
+  let { data, error } = await sb.from("ofertas")
+    .select("*, usuarios(nombre, calificacion_promedio)").eq("estado", "activa")
+    .order("created_at", { ascending: false });
+  if (error){ // si la relación no está disponible, reintenta sin el nombre
+    ({ data, error } = await sb.from("ofertas").select("*").eq("estado", "activa"));
+  }
+  if (error){ cont.innerHTML = `<div class="vacio">No pudimos cargar las ofertas: ${esc(error.message)}</div>`; return; }
+  pintarOfertas(data);
+}
+function pintarOfertas(data){
+  const cont = $("listaOfertas");
+  if (!data.length){ cont.innerHTML = '<div class="vacio">Aún no hay ofertas cerca. Sé el primero en compartir.</div>'; return; }
+  cont.innerHTML = "";
+  data.forEach(o => {
+    const nombre = (o.usuarios && o.usuarios.nombre) || "Estudiante";
+    const rating = (o.usuarios && o.usuarios.calificacion_promedio) || 5;
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div class="row">
+        <div class="ava">${esc(nombre[0].toUpperCase())}</div>
+        <div><div class="name">${esc(nombre)}</div>
+        <div class="stars">${estrellas(rating)}<small>${Number(rating).toFixed(1)}</small></div></div>
+      </div>
+      <p class="meta">📍 ${esc(o.ubicacion)} · señal estable</p>
+      <hr>
+      <div class="meta" style="margin:0">Sesión de acceso compartido</div>
+      <div class="price">${esc(Number(o.precio_xlm).toFixed(2))} <small>XLM</small></div>
+      <button class="cta">Conectar ahora</button>
+      <p class="estado"></p>`;
+    div.querySelector("button").onclick = (ev) => solicitarYPagar(o, ev.currentTarget, div.querySelector(".estado"));
+    cont.appendChild(div);
+  });
+}
+
+function mostrarAcciones(estadoEl, boton, onConfirmar, onCancelar){
+  const caja = document.createElement("div"); caja.className = "acciones";
+  caja.style.cssText = "display:flex;gap:8px;margin-top:10px";
+  caja.innerHTML = '<button class="cta" style="flex:2">Confirmar: ya tengo internet</button><button class="cta" style="flex:1;background:#1c232d;color:#e8ecf1">Cancelar</button>';
+  const [bc, bx] = caja.querySelectorAll("button");
+  const cerrar = () => { caja.remove(); };
+  bc.onclick = async () => { bc.disabled = bx.disabled = true; try { await onConfirmar(); cerrar(); } catch(e){ estadoEl.className="estado err"; estadoEl.textContent="Error: "+e.message; bc.disabled = bx.disabled = false; } };
+  bx.onclick = async () => { bc.disabled = bx.disabled = true; try { await onCancelar(); cerrar(); } catch(e){ estadoEl.className="estado err"; estadoEl.textContent="Error: "+e.message; bc.disabled = bx.disabled = false; } };
+  estadoEl.after(caja);
+}
+
+async function solicitarYPagar(oferta, boton, estadoEl){
+  boton.disabled = true; estadoEl.className = "estado"; estadoEl.textContent = "Creando la sesión…";
+  try {
+    if (ESCROW){
+      let filaId = null, idContrato = null;
+      if (!DEMO){
+        const { data: sesion, error: e1 } = await sb.from("sesiones").insert({ oferta_id: oferta.id, buscador_id: usuarioActual.id }).select().single();
+        if (e1) throw e1; filaId = sesion.id;
+      }
+      let oferentePk = "DEMO";
+      if (!DEMO){
+        const { data: of, error: e2 } = await sb.from("usuarios").select("stellar_public_key").eq("id", oferta.usuario_id).single();
+        if (e2) throw e2; oferentePk = of.stellar_public_key;
+      }
+      estadoEl.textContent = "Depositando en custodia (contrato)…";
+      let hash;
+      if (DEMO){ await new Promise(r=>setTimeout(r,1500)); hash = "demo-deposito"; idContrato = 0; }
+      else {
+        const tokenId = StellarSdk.Asset.native().contractId(StellarSdk.Networks.TESTNET);
+        const r = await llamarContrato("crear_sesion", [
+          new StellarSdk.Address(usuarioActual.stellar_public_key).toScVal(),
+          new StellarSdk.Address(oferentePk).toScVal(),
+          StellarSdk.nativeToScVal(aStroops(oferta.precio_xlm), { type: "i128" }),
+          new StellarSdk.Address(tokenId).toScVal(),
+          StellarSdk.nativeToScVal(BigInt(1800), { type: "u64" }) // plazo: 30 min para confirmar
+        ]);
+        hash = r.hash; idContrato = r.valor;
+        await sb.from("sesiones").update({ estado: "activa", stellar_tx_id: hash, contrato_sesion_id: Number(idContrato) }).eq("id", filaId);
+      }
+      estadoEl.className = "estado ok";
+      estadoEl.textContent = "🔒 " + oferta.precio_xlm + " XLM en custodia. Se libera cuando confirmes.";
+      mostrarAcciones(estadoEl, boton,
+        async () => {
+          estadoEl.className = "estado"; estadoEl.textContent = "Liberando el pago…";
+          if (DEMO) await new Promise(r=>setTimeout(r,1200));
+          else { const r = await llamarContrato("confirmar_sesion", [StellarSdk.nativeToScVal(BigInt(idContrato), { type: "u64" })]);
+                 await sb.from("sesiones").update({ estado: "completada", stellar_tx_id: r.hash }).eq("id", filaId); }
+          estadoEl.className = "estado ok"; estadoEl.textContent = "✓ Sesión completada · pago liberado" + (DEMO ? " (demo)" : "");
+        },
+        async () => {
+          estadoEl.className = "estado"; estadoEl.textContent = "Devolviendo el pago…";
+          if (DEMO) await new Promise(r=>setTimeout(r,1200));
+          else { await llamarContrato("cancelar_sesion", [StellarSdk.nativeToScVal(BigInt(idContrato), { type: "u64" })]);
+                 await sb.from("sesiones").update({ estado: "cancelada" }).eq("id", filaId); }
+          estadoEl.className = "estado ok"; estadoEl.textContent = "Cancelada · tu pago volvió a tu cuenta" + (DEMO ? " (demo)" : "");
+          boton.disabled = false;
+        });
+      return;
+    }
+    if (DEMO){
+      await new Promise(r=>setTimeout(r,900)); estadoEl.textContent = "Pagando (simulado)…";
+      await new Promise(r=>setTimeout(r,1200));
+      estadoEl.className = "estado ok"; estadoEl.textContent = "✓ Sesión completada · demo (sin pago real)"; return;
+    }
+    const { data: sesion, error: e1 } = await sb.from("sesiones")
+      .insert({ oferta_id: oferta.id, buscador_id: usuarioActual.id }).select().single();
+    if (e1) throw e1;
+
+    const { data: oferente, error: e2 } = await sb.from("usuarios")
+      .select("stellar_public_key").eq("id", oferta.usuario_id).single();
+    if (e2) throw e2;
+
+    estadoEl.textContent = "Pagando en Stellar testnet…";
+    const cuenta = await horizon.loadAccount(usuarioActual.stellar_public_key);
+    const tx = new StellarSdk.TransactionBuilder(cuenta, {
+      fee: StellarSdk.BASE_FEE, networkPassphrase: StellarSdk.Networks.TESTNET
+    })
+      .addOperation(StellarSdk.Operation.payment({
+        destination: oferente.stellar_public_key,
+        asset: StellarSdk.Asset.native(),
+        amount: String(oferta.precio_xlm)
+      }))
+      .setTimeout(30).build();
+    tx.sign(StellarSdk.Keypair.fromSecret(usuarioActual.secret));
+    const resultado = await horizon.submitTransaction(tx);
+
+    await sb.from("sesiones").update({ estado: "completada", stellar_tx_id: resultado.hash }).eq("id", sesion.id);
+    estadoEl.className = "estado ok";
+    estadoEl.textContent = "✓ Sesión completada · " + resultado.hash.slice(0, 12) + "…";
+  } catch (e) {
+    estadoEl.className = "estado err"; estadoEl.textContent = "Error: " + e.message;
+    boton.disabled = false;
+  }
+}
+
+// ---------- Publicar ----------
+$("btnPublicar").onclick = async () => {
+  const ubicacion = $("inputUbicacion").value.trim();
+  const precio = parseFloat($("inputPrecio").value);
+  const msg = $("mensajePublicar");
+  if (!ubicacion || !(precio > 0)){ msg.className = "estado err"; msg.textContent = "Completa la ubicación y un precio válido."; return; }
+
+  if (DEMO){
+    const l = demoGet(); l.unshift({ id:"m"+Date.now(), usuario_id:"yo", ubicacion, precio_xlm:precio, usuarios:{nombre:usuarioActual.nombre, calificacion_promedio:5} });
+    localStorage.setItem("wefee_demo_ofertas", JSON.stringify(l));
+    msg.className="estado ok"; msg.textContent="¡Listo! Tu oferta ya aparece en “Cerca”."; $("inputUbicacion").value=""; $("inputPrecio").value=""; return;
+  }
+  const ahora = new Date();
+  const { error } = await sb.from("ofertas").insert({
+    usuario_id: usuarioActual.id, ubicacion,
+    disponible_desde: ahora.toISOString(),
+    disponible_hasta: new Date(ahora.getTime() + 3 * 3600 * 1000).toISOString(),
+    precio_xlm: precio
+  });
+  if (error){ msg.className = "estado err"; msg.textContent = "Error: " + error.message; return; }
+  msg.className = "estado ok"; msg.textContent = "¡Listo! Tu oferta ya aparece en “Cerca”.";
+  $("inputUbicacion").value = ""; $("inputPrecio").value = "";
+};
+
+iniciar();
+</script>
+</body>
+</html>
