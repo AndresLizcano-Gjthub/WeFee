@@ -8,8 +8,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/13.3.0/stellar-sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stellar/stellar-sdk@13.3.0/dist/stellar-sdk.min.js"></script>
 
 <style>
   :root{
@@ -131,37 +130,43 @@
   .caja h1{margin:0 0 6px; font-size:30px;}
   .caja p{color:var(--dim); font-size:14px; margin:0 0 18px;}
   .caja input{text-align:center;}
+  .addr{font-family:ui-monospace,monospace; font-size:12px; color:var(--dim); margin-top:6px; word-break:break-all;}
+  .estado a{color:var(--blue);}
+  .btn-wallet{
+    border:1.5px solid var(--dim); background:none; color:var(--txt); border-radius:999px;
+    padding:8px 14px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .btn-wallet.on{border-color:var(--green); color:var(--green);}
+  .aviso{background:#2a1a14; color:#ff8a66; font:600 12px Inter,sans-serif; text-align:center; padding:6px;}
 </style>
-</head>
-<body>
+</head><body>
 
 <div id="modalNombre">
   <div class="caja">
     <div class="logo">W</div>
     <h1>WeFee</h1>
-    <p>Comparte lo que te sobra. Pide datos cerca de ti.<br>Piloto en testnet, sin dinero real.</p>
-    <input id="inputNombre" placeholder="¿Cómo te llamas?" autocomplete="given-name" />
-    <button class="cta" id="btnEntrar">Entrar</button>
+    <p>Comparte lo que te sobra. Pide datos cerca de ti.<br>Piloto en Stellar testnet, sin dinero real.</p>
+    <button class="cta" id="btnEntrar">Conectar wallet</button>
     <p id="errorEntrada" class="estado err"></p>
   </div>
 </div>
 
 <header>
   <div class="brand">We<span>Fee</span></div>
-  <div class="avatar-btn" id="avatarBtn">A</div>
+  <button class="btn-wallet" id="avatarBtn">Wallet</button>
 </header>
 
-<div id="demoBanner" style="display:none;background:#2a1a14;color:#ff8a66;font:600 12px Inter,sans-serif;text-align:center;padding:6px">MODO DEMO · datos locales y pago simulado</div>
+<div id="avisoRed" class="aviso" style="display:none"></div>
 <main>
   <section id="vista-ofertas" class="vista activa">
     <h2>Cerca de ti ahora</h2>
     <p class="sub">Estudiantes que comparten su conexión.</p>
-    <div id="listaOfertas"><div class="vacio"><div class="spinner"></div>Buscando ofertas…</div></div>
+    <div id="listaOfertas"></div>
   </section>
 
   <section id="vista-publicar" class="vista">
     <h2>Comparte lo que te sobra</h2>
-    <p class="sub">Publica tu oferta y gana mientras estudias.</p>
+    <p class="sub">Publica tu oferta y gana mientras estudias. Recibes el pago en tu wallet.</p>
     <div class="card">
       <label for="inputUbicacion">¿Dónde estás?</label>
       <input id="inputUbicacion" placeholder="Ej. Bloque F, cafetería" maxlength="80" />
@@ -173,107 +178,95 @@
   </section>
 
   <section id="vista-pronto" class="vista">
-    <span class="badge"><i></i>EN CONSTRUCCIÓN</span>
-    <h2 style="margin-top:14px">Lo que viene</h2>
-    <p class="sub">Esto todavía no funciona, y por eso lo mostramos.</p>
-    <div class="wire"><div><b>Mapa en vivo</b><br>boceto de la próxima versión</div></div>
+    <span class="badge"><i></i>ESTADO DEL PILOTO</span>
+    <h2 style="margin-top:14px">Qué funciona y qué falta</h2>
+    <p class="sub">Lo que ves aquí es lo que realmente está hecho.</p>
+    <div class="prog"><div class="l"><span>Pago en custodia (Soroban, testnet)</span><span id="pctEscrow">60%</span></div><div class="bar"><div id="barEscrow" style="width:60%"></div></div></div>
+    <div class="prog"><div class="l"><span>Conexión de wallet (Stellar Wallets Kit)</span><span>100%</span></div><div class="bar"><div style="width:100%"></div></div></div>
     <div class="prog"><div class="l"><span>Radar de proximidad (Bluetooth)</span><span>45%</span></div><div class="bar"><div style="width:45%"></div></div></div>
-    <div class="prog"><div class="l"><span>Hotspot automático</span><span>25%</span></div><div class="bar"><div style="width:25%"></div></div></div>
-    <div class="prog"><div class="l"><span>Pago en custodia (Soroban)</span><span>60%</span></div><div class="bar"><div style="width:60%"></div></div></div>
+    <div class="prog"><div class="l"><span>Hotspot automático (Android)</span><span>25%</span></div><div class="bar"><div style="width:25%"></div></div></div>
   </section>
 </main>
 
 <nav>
   <button data-vista="ofertas" class="activa"><span class="ic">◉</span>Cerca</button>
   <button data-vista="publicar"><span class="ic">＋</span>Compartir</button>
-  <button data-vista="pronto"><span class="ic">◌</span>Pronto</button>
+  <button data-vista="pronto"><span class="ic">◌</span>Estado</button>
 </nav>
 
-<script>
-const SUPABASE_URL = "https://TU-PROYECTO.supabase.co"; // reemplaza con la URL de tu proyecto
-const SUPABASE_KEY = "TU-ANON-KEY";                      // reemplaza con tu anon/publishable key
-// Si no has puesto tus claves, la app corre en MODO DEMO (datos locales, pago simulado).
-const CONTRACT_ID = "TU-CONTRACT-ID"; // dirección C… del contrato wefee-escrow desplegado en testnet (ver DEPLOY_CONTRATO.md)
-const ESCROW = !CONTRACT_ID.includes("TU-CONTRACT"); // con contrato: pago en custodia; sin él: pago directo
-const DEMO = SUPABASE_URL.includes("TU-PROYECTO");
-const sb = (DEMO || typeof supabase === "undefined") ? null : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const DEMO_OFERTAS = [
-  { id:"d1", usuario_id:"u1", ubicacion:"Biblioteca Karl Parrish", precio_xlm:2, usuarios:{nombre:"Carlos M.", calificacion_promedio:4.9} },
-  { id:"d2", usuario_id:"u2", ubicacion:"Parada Calle 84", precio_xlm:1.5, usuarios:{nombre:"Valentina R.", calificacion_promedio:4.8} },
-  { id:"d3", usuario_id:"u3", ubicacion:"Cafetería Bloque G", precio_xlm:3, usuarios:{nombre:"Sebastián P.", calificacion_promedio:5} }
-];
-function demoGet(){ try{ return JSON.parse(localStorage.getItem("wefee_demo_ofertas")||"[]"); }catch(e){ return []; } }
+<script src="config.js"></script>
+<script type="module">
+import { StellarWalletsKit } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/sdk";
+import { defaultModules } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/utils";
 
-// Según la versión del SDK puede ser StellarSdk.Horizon.Server o StellarSdk.Server
-const horizon = (typeof StellarSdk !== "undefined") ? new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org") : null;
+const CFG = window.WEFEE_CONFIG || {};
+const CONTRACT_ID = (CFG.CONTRACT_ID || "").trim();
+const ESCROW = /^C[A-Z2-7]{55}$/.test(CONTRACT_ID);   // con contrato: pago en custodia; sin él: pago directo
+const SEED = Array.isArray(CFG.SEED_OFERTAS) ? CFG.SEED_OFERTAS : [];
+const PASS = StellarSdk.Networks.TESTNET;
+const EXPERT = "https://stellar.expert/explorer/testnet";
 
-const rpc = (typeof StellarSdk !== "undefined") ? new StellarSdk.rpc.Server("https://soroban-testnet.stellar.org") : null;
-let usuarioActual = null;
+StellarWalletsKit.init({ modules: defaultModules(), network: PASS });
+const horizon = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+const rpc = new StellarSdk.rpc.Server("https://soroban-testnet.stellar.org");
 
-// ---------- Contrato de custodia (Soroban) ----------
+let direccion = null;
+
+const $ = (id) => document.getElementById(id);
+const corta = (a) => a.slice(0, 4) + "…" + a.slice(-4);
+const aStroops = (xlm) => BigInt(Math.round(Number(xlm) * 1e7));
+function esc(s){ const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+function enlaceTx(hash){ return `<a href="${EXPERT}/tx/${hash}" target="_blank" rel="noopener">ver en stellar.expert ↗</a>`; }
+
+// ---------- Aviso de modo ----------
+if (ESCROW){ $("pctEscrow").textContent = "100%"; $("barEscrow").style.width = "100%"; }
+else { const a = $("avisoRed"); a.style.display = "block"; a.textContent = "Sin contrato configurado: los pagos van directos (sin custodia)."; }
+
+// ---------- Wallet ----------
+async function conectar(){
+  const { address } = await StellarWalletsKit.authModal();
+  direccion = address;
+  localStorage.setItem("wefee_direccion", address);
+  $("modalNombre").style.display = "none";
+  $("avatarBtn").textContent = corta(address); $("avatarBtn").classList.add("on");
+  cargarOfertas();
+}
+$("btnEntrar").onclick = async () => {
+  const err = $("errorEntrada"); err.className = "estado"; err.textContent = "";
+  try { await conectar(); } catch (e){ err.className = "estado err"; err.textContent = "No se pudo conectar: " + (e && e.message ? e.message : "cancelado"); }
+};
+$("avatarBtn").onclick = async () => {
+  try { await StellarWalletsKit.profileModal(); } catch (e){ /* cerrado por el usuario */ }
+};
+cargarOfertas();
+
+// ---------- Transacciones firmadas por la wallet ----------
+async function firmar(tx){
+  const { signedTxXdr } = await StellarWalletsKit.signTransaction(tx.toXDR(), { networkPassphrase: PASS, address: direccion });
+  return StellarSdk.TransactionBuilder.fromXDR(signedTxXdr, PASS);
+}
 async function llamarContrato(metodo, args){
-  const cuenta = await rpc.getAccount(usuarioActual.stellar_public_key);
-  let tx = new StellarSdk.TransactionBuilder(cuenta, { fee: "1000000", networkPassphrase: StellarSdk.Networks.TESTNET })
+  const cuenta = await rpc.getAccount(direccion);
+  let tx = new StellarSdk.TransactionBuilder(cuenta, { fee: "1000000", networkPassphrase: PASS })
     .addOperation(new StellarSdk.Contract(CONTRACT_ID).call(metodo, ...args))
     .setTimeout(60).build();
-  tx = await rpc.prepareTransaction(tx);          // simula y añade recursos/fees
-  tx.sign(StellarSdk.Keypair.fromSecret(usuarioActual.secret));
-  const env = await rpc.sendTransaction(tx);
+  tx = await rpc.prepareTransaction(tx);
+  const firmada = await firmar(tx);
+  const env = await rpc.sendTransaction(firmada);
   if (env.status === "ERROR") throw new Error("El contrato rechazó la transacción");
   let r = await rpc.getTransaction(env.hash);
   for (let i = 0; i < 30 && r.status === "NOT_FOUND"; i++){ await new Promise(x => setTimeout(x, 1000)); r = await rpc.getTransaction(env.hash); }
   if (r.status !== "SUCCESS") throw new Error("La transacción falló en la red (" + r.status + ")");
   return { hash: env.hash, valor: r.returnValue ? StellarSdk.scValToNative(r.returnValue) : null };
 }
-const aStroops = (xlm) => BigInt(Math.round(Number(xlm) * 1e7));
-
-const $ = (id) => document.getElementById(id);
-function esc(s){ const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
-function estrellas(n){ const r = Math.round(n || 5); return "★".repeat(r) + "☆".repeat(5 - r); }
-
-// ---------- Arranque ----------
-function iniciar(){
-  if (DEMO) $("demoBanner").style.display = "block";
-  try { usuarioActual = JSON.parse(localStorage.getItem("wefee_usuario") || "null"); } catch(e){ usuarioActual = null; }
-  if (usuarioActual){
-    $("modalNombre").style.display = "none";
-    $("avatarBtn").textContent = (usuarioActual.nombre || "A")[0].toUpperCase();
-    cargarOfertas();
-  }
+async function pagoDirecto(destino, xlm){
+  const cuenta = await horizon.loadAccount(direccion);
+  const tx = new StellarSdk.TransactionBuilder(cuenta, { fee: StellarSdk.BASE_FEE, networkPassphrase: PASS })
+    .addOperation(StellarSdk.Operation.payment({ destination: destino, asset: StellarSdk.Asset.native(), amount: String(xlm) }))
+    .setTimeout(60).build();
+  const r = await horizon.submitTransaction(await firmar(tx));
+  return r.hash;
 }
-
-$("btnEntrar").onclick = async () => {
-  const nombre = $("inputNombre").value.trim();
-  const err = $("errorEntrada");
-  if (!nombre){ err.textContent = "Escribe tu nombre."; return; }
-  err.className = "estado"; err.textContent = "Creando tu cuenta de prueba…";
-  try {
-    if (DEMO){
-      usuarioActual = { id:"yo", nombre, stellar_public_key:"DEMO", secret:"" };
-      localStorage.setItem("wefee_usuario", JSON.stringify(usuarioActual));
-      $("modalNombre").style.display = "none"; $("avatarBtn").textContent = nombre[0].toUpperCase();
-      $("demoBanner").style.display = "block"; cargarOfertas(); return;
-    }
-    const { data: authData, error: authError } = await sb.auth.signInAnonymously();
-    if (authError) throw authError;
-
-    const kp = StellarSdk.Keypair.random();
-    await fetch(`https://friendbot.stellar.org?addr=${kp.publicKey()}`);
-
-    const { data: usuario, error: dbError } = await sb.from("usuarios").insert({
-      auth_id: authData.user.id, nombre, rol: "ambos", stellar_public_key: kp.publicKey()
-    }).select().single();
-    if (dbError) throw dbError;
-
-    usuarioActual = { ...usuario, secret: kp.secret() };
-    localStorage.setItem("wefee_usuario", JSON.stringify(usuarioActual));
-    $("modalNombre").style.display = "none";
-    $("avatarBtn").textContent = nombre[0].toUpperCase();
-    cargarOfertas();
-  } catch (e) {
-    err.className = "estado err"; err.textContent = "Algo falló: " + e.message;
-  }
-};
 
 // ---------- Navegación ----------
 document.querySelectorAll("nav button").forEach(btn => {
@@ -286,35 +279,22 @@ document.querySelectorAll("nav button").forEach(btn => {
   };
 });
 
-// ---------- Ofertas ----------
-async function cargarOfertas(){
+// ---------- Ofertas (locales + semillas de config.js) ----------
+function ofertasLocales(){ try { return JSON.parse(localStorage.getItem("wefee_ofertas") || "[]"); } catch(e){ return []; } }
+function cargarOfertas(){
+  const todas = [...ofertasLocales(), ...SEED];
   const cont = $("listaOfertas");
-  if (DEMO){ return pintarOfertas([...demoGet(), ...DEMO_OFERTAS]); }
-  let { data, error } = await sb.from("ofertas")
-    .select("*, usuarios(nombre, calificacion_promedio)").eq("estado", "activa")
-    .order("created_at", { ascending: false });
-  if (error){ // si la relación no está disponible, reintenta sin el nombre
-    ({ data, error } = await sb.from("ofertas").select("*").eq("estado", "activa"));
-  }
-  if (error){ cont.innerHTML = `<div class="vacio">No pudimos cargar las ofertas: ${esc(error.message)}</div>`; return; }
-  pintarOfertas(data);
-}
-function pintarOfertas(data){
-  const cont = $("listaOfertas");
-  if (!data.length){ cont.innerHTML = '<div class="vacio">Aún no hay ofertas cerca. Sé el primero en compartir.</div>'; return; }
+  if (!todas.length){ cont.innerHTML = '<div class="vacio">Aún no hay ofertas cerca. Sé el primero en compartir.</div>'; return; }
   cont.innerHTML = "";
-  data.forEach(o => {
-    const nombre = (o.usuarios && o.usuarios.nombre) || "Estudiante";
-    const rating = (o.usuarios && o.usuarios.calificacion_promedio) || 5;
-    const div = document.createElement("div");
-    div.className = "card";
+  todas.forEach(o => {
+    const div = document.createElement("div"); div.className = "card";
     div.innerHTML = `
       <div class="row">
-        <div class="ava">${esc(nombre[0].toUpperCase())}</div>
-        <div><div class="name">${esc(nombre)}</div>
-        <div class="stars">${estrellas(rating)}<small>${Number(rating).toFixed(1)}</small></div></div>
+        <div class="ava">${esc((o.nombre || "E")[0].toUpperCase())}</div>
+        <div><div class="name">${esc(o.nombre || "Estudiante")}</div>
+        <div class="addr">${esc(corta(o.direccion))}</div></div>
       </div>
-      <p class="meta">📍 ${esc(o.ubicacion)} · señal estable</p>
+      <p class="meta">📍 ${esc(o.ubicacion)}</p>
       <hr>
       <div class="meta" style="margin:0">Sesión de acceso compartido</div>
       <div class="price">${esc(Number(o.precio_xlm).toFixed(2))} <small>XLM</small></div>
@@ -325,127 +305,72 @@ function pintarOfertas(data){
   });
 }
 
-function mostrarAcciones(estadoEl, boton, onConfirmar, onCancelar){
-  const caja = document.createElement("div"); caja.className = "acciones";
+function mostrarAcciones(estadoEl, onConfirmar, onCancelar){
+  const caja = document.createElement("div");
   caja.style.cssText = "display:flex;gap:8px;margin-top:10px";
   caja.innerHTML = '<button class="cta" style="flex:2">Confirmar: ya tengo internet</button><button class="cta" style="flex:1;background:#1c232d;color:#e8ecf1">Cancelar</button>';
   const [bc, bx] = caja.querySelectorAll("button");
-  const cerrar = () => { caja.remove(); };
-  bc.onclick = async () => { bc.disabled = bx.disabled = true; try { await onConfirmar(); cerrar(); } catch(e){ estadoEl.className="estado err"; estadoEl.textContent="Error: "+e.message; bc.disabled = bx.disabled = false; } };
-  bx.onclick = async () => { bc.disabled = bx.disabled = true; try { await onCancelar(); cerrar(); } catch(e){ estadoEl.className="estado err"; estadoEl.textContent="Error: "+e.message; bc.disabled = bx.disabled = false; } };
+  const correr = (fn) => async () => {
+    bc.disabled = bx.disabled = true;
+    try { await fn(); caja.remove(); }
+    catch(e){ estadoEl.className = "estado err"; estadoEl.textContent = "Error: " + e.message; bc.disabled = bx.disabled = false; }
+  };
+  bc.onclick = correr(onConfirmar); bx.onclick = correr(onCancelar);
   estadoEl.after(caja);
 }
 
 async function solicitarYPagar(oferta, boton, estadoEl){
-  boton.disabled = true; estadoEl.className = "estado"; estadoEl.textContent = "Creando la sesión…";
+  if (!direccion){ estadoEl.className = "estado err"; estadoEl.textContent = "Conecta tu wallet primero."; return; }
+  if (direccion === oferta.direccion){ estadoEl.className = "estado err"; estadoEl.textContent = "No puedes pagarte a ti mismo: cambia de cuenta en tu wallet."; return; }
+  boton.disabled = true; estadoEl.className = "estado"; estadoEl.textContent = "Firma en tu wallet…";
   try {
-    if (ESCROW){
-      let filaId = null, idContrato = null;
-      if (!DEMO){
-        const { data: sesion, error: e1 } = await sb.from("sesiones").insert({ oferta_id: oferta.id, buscador_id: usuarioActual.id }).select().single();
-        if (e1) throw e1; filaId = sesion.id;
-      }
-      let oferentePk = "DEMO";
-      if (!DEMO){
-        const { data: of, error: e2 } = await sb.from("usuarios").select("stellar_public_key").eq("id", oferta.usuario_id).single();
-        if (e2) throw e2; oferentePk = of.stellar_public_key;
-      }
-      estadoEl.textContent = "Depositando en custodia (contrato)…";
-      let hash;
-      if (DEMO){ await new Promise(r=>setTimeout(r,1500)); hash = "demo-deposito"; idContrato = 0; }
-      else {
-        const tokenId = StellarSdk.Asset.native().contractId(StellarSdk.Networks.TESTNET);
-        const r = await llamarContrato("crear_sesion", [
-          new StellarSdk.Address(usuarioActual.stellar_public_key).toScVal(),
-          new StellarSdk.Address(oferentePk).toScVal(),
-          StellarSdk.nativeToScVal(aStroops(oferta.precio_xlm), { type: "i128" }),
-          new StellarSdk.Address(tokenId).toScVal(),
-          StellarSdk.nativeToScVal(BigInt(1800), { type: "u64" }) // plazo: 30 min para confirmar
-        ]);
-        hash = r.hash; idContrato = r.valor;
-        await sb.from("sesiones").update({ estado: "activa", stellar_tx_id: hash, contrato_sesion_id: Number(idContrato) }).eq("id", filaId);
-      }
-      estadoEl.className = "estado ok";
-      estadoEl.textContent = "🔒 " + oferta.precio_xlm + " XLM en custodia. Se libera cuando confirmes.";
-      mostrarAcciones(estadoEl, boton,
-        async () => {
-          estadoEl.className = "estado"; estadoEl.textContent = "Liberando el pago…";
-          if (DEMO) await new Promise(r=>setTimeout(r,1200));
-          else { const r = await llamarContrato("confirmar_sesion", [StellarSdk.nativeToScVal(BigInt(idContrato), { type: "u64" })]);
-                 await sb.from("sesiones").update({ estado: "completada", stellar_tx_id: r.hash }).eq("id", filaId); }
-          estadoEl.className = "estado ok"; estadoEl.textContent = "✓ Sesión completada · pago liberado" + (DEMO ? " (demo)" : "");
-        },
-        async () => {
-          estadoEl.className = "estado"; estadoEl.textContent = "Devolviendo el pago…";
-          if (DEMO) await new Promise(r=>setTimeout(r,1200));
-          else { await llamarContrato("cancelar_sesion", [StellarSdk.nativeToScVal(BigInt(idContrato), { type: "u64" })]);
-                 await sb.from("sesiones").update({ estado: "cancelada" }).eq("id", filaId); }
-          estadoEl.className = "estado ok"; estadoEl.textContent = "Cancelada · tu pago volvió a tu cuenta" + (DEMO ? " (demo)" : "");
-          boton.disabled = false;
-        });
+    if (!ESCROW){
+      const hash = await pagoDirecto(oferta.direccion, oferta.precio_xlm);
+      estadoEl.className = "estado ok"; estadoEl.innerHTML = "✓ Pago enviado · " + enlaceTx(hash);
       return;
     }
-    if (DEMO){
-      await new Promise(r=>setTimeout(r,900)); estadoEl.textContent = "Pagando (simulado)…";
-      await new Promise(r=>setTimeout(r,1200));
-      estadoEl.className = "estado ok"; estadoEl.textContent = "✓ Sesión completada · demo (sin pago real)"; return;
-    }
-    const { data: sesion, error: e1 } = await sb.from("sesiones")
-      .insert({ oferta_id: oferta.id, buscador_id: usuarioActual.id }).select().single();
-    if (e1) throw e1;
-
-    const { data: oferente, error: e2 } = await sb.from("usuarios")
-      .select("stellar_public_key").eq("id", oferta.usuario_id).single();
-    if (e2) throw e2;
-
-    estadoEl.textContent = "Pagando en Stellar testnet…";
-    const cuenta = await horizon.loadAccount(usuarioActual.stellar_public_key);
-    const tx = new StellarSdk.TransactionBuilder(cuenta, {
-      fee: StellarSdk.BASE_FEE, networkPassphrase: StellarSdk.Networks.TESTNET
-    })
-      .addOperation(StellarSdk.Operation.payment({
-        destination: oferente.stellar_public_key,
-        asset: StellarSdk.Asset.native(),
-        amount: String(oferta.precio_xlm)
-      }))
-      .setTimeout(30).build();
-    tx.sign(StellarSdk.Keypair.fromSecret(usuarioActual.secret));
-    const resultado = await horizon.submitTransaction(tx);
-
-    await sb.from("sesiones").update({ estado: "completada", stellar_tx_id: resultado.hash }).eq("id", sesion.id);
+    const tokenId = StellarSdk.Asset.native().contractId(PASS);
+    const r = await llamarContrato("crear_sesion", [
+      new StellarSdk.Address(direccion).toScVal(),
+      new StellarSdk.Address(oferta.direccion).toScVal(),
+      StellarSdk.nativeToScVal(aStroops(oferta.precio_xlm), { type: "i128" }),
+      new StellarSdk.Address(tokenId).toScVal(),
+      StellarSdk.nativeToScVal(BigInt(1800), { type: "u64" })      // plazo: 30 min para confirmar
+    ]);
+    const idSesion = BigInt(r.valor);
     estadoEl.className = "estado ok";
-    estadoEl.textContent = "✓ Sesión completada · " + resultado.hash.slice(0, 12) + "…";
-  } catch (e) {
-    estadoEl.className = "estado err"; estadoEl.textContent = "Error: " + e.message;
+    estadoEl.innerHTML = "🔒 " + oferta.precio_xlm + " XLM en custodia · " + enlaceTx(r.hash);
+    mostrarAcciones(estadoEl,
+      async () => {
+        estadoEl.className = "estado"; estadoEl.textContent = "Liberando el pago…";
+        const c = await llamarContrato("confirmar_sesion", [StellarSdk.nativeToScVal(idSesion, { type: "u64" })]);
+        estadoEl.className = "estado ok"; estadoEl.innerHTML = "✓ Sesión completada · pago liberado · " + enlaceTx(c.hash);
+      },
+      async () => {
+        estadoEl.className = "estado"; estadoEl.textContent = "Devolviendo el pago…";
+        const c = await llamarContrato("cancelar_sesion", [StellarSdk.nativeToScVal(idSesion, { type: "u64" })]);
+        estadoEl.className = "estado ok"; estadoEl.innerHTML = "Cancelada · tu pago volvió a tu cuenta · " + enlaceTx(c.hash);
+        boton.disabled = false;
+      });
+  } catch (e){
+    estadoEl.className = "estado err"; estadoEl.textContent = "Error: " + (e && e.message ? e.message : e);
     boton.disabled = false;
   }
 }
 
 // ---------- Publicar ----------
-$("btnPublicar").onclick = async () => {
+$("btnPublicar").onclick = () => {
   const ubicacion = $("inputUbicacion").value.trim();
   const precio = parseFloat($("inputPrecio").value);
   const msg = $("mensajePublicar");
+  if (!direccion){ msg.className = "estado err"; msg.textContent = "Conecta tu wallet para publicar."; return; }
   if (!ubicacion || !(precio > 0)){ msg.className = "estado err"; msg.textContent = "Completa la ubicación y un precio válido."; return; }
-
-  if (DEMO){
-    const l = demoGet(); l.unshift({ id:"m"+Date.now(), usuario_id:"yo", ubicacion, precio_xlm:precio, usuarios:{nombre:usuarioActual.nombre, calificacion_promedio:5} });
-    localStorage.setItem("wefee_demo_ofertas", JSON.stringify(l));
-    msg.className="estado ok"; msg.textContent="¡Listo! Tu oferta ya aparece en “Cerca”."; $("inputUbicacion").value=""; $("inputPrecio").value=""; return;
-  }
-  const ahora = new Date();
-  const { error } = await sb.from("ofertas").insert({
-    usuario_id: usuarioActual.id, ubicacion,
-    disponible_desde: ahora.toISOString(),
-    disponible_hasta: new Date(ahora.getTime() + 3 * 3600 * 1000).toISOString(),
-    precio_xlm: precio
-  });
-  if (error){ msg.className = "estado err"; msg.textContent = "Error: " + error.message; return; }
+  const l = ofertasLocales();
+  l.unshift({ id: "m" + Date.now(), direccion, nombre: "Tú · " + corta(direccion), ubicacion, precio_xlm: precio });
+  localStorage.setItem("wefee_ofertas", JSON.stringify(l));
   msg.className = "estado ok"; msg.textContent = "¡Listo! Tu oferta ya aparece en “Cerca”.";
   $("inputUbicacion").value = ""; $("inputPrecio").value = "";
 };
-
-iniciar();
 </script>
 </body>
 </html>
