@@ -5,7 +5,6 @@ Requisitos: Rust + `stellar` CLI (`cargo install --locked stellar-cli`) y el tar
 
 ## 1. Compilar y probar
 ```bash
-cd wefee-soroban
 cargo test                  # 8 pruebas (deben pasar)
 stellar contract build      # genera target/wasm32v1-none/release/wefee_escrow.wasm
 ```
@@ -20,7 +19,7 @@ stellar contract deploy \
 Te imprime una dirección que empieza con **C…**. Esa es el CONTRACT_ID.
 
 ## 3. Conectarlo a la web
-En `wefee-web-v2/index.html` reemplaza `TU-CONTRACT-ID` por esa dirección C… y vuelve a publicar.
+En `index.html` reemplaza `TU-CONTRACT-ID` por esa dirección C… y vuelve a publicar.
 En Supabase corre la última línea de `schema.sql` (`alter table sesiones add column contrato_sesion_id…`).
 
 ## 4. Probar
