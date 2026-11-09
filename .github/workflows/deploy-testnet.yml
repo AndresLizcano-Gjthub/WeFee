@@ -1,0 +1,38 @@
+name: Desplegar en testnet
+
+# Compila y prueba el contrato, lo despliega en Stellar testnet, ejecuta una sesión de
+# ejemplo (confirmada y otra cancelada) y guarda el CONTRACT_ID en config.js.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Instalar stellar-cli
+        run: cargo install --locked stellar-cli
+
+      - name: Pruebas del contrato
+        run: cargo test
+
+      - name: Desplegar y probar en testnet
+        run: ./scripts/deploy_testnet.sh
+
+      - name: Guardar config.js en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config.js
+          git commit -m "Despliega el contrato en testnet y guarda su CONTRACT_ID" || echo "sin cambios"
+          git push
