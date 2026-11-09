@@ -195,9 +195,18 @@
 </nav>
 
 <script src="config.js"></script>
+<script>
+// Si el módulo de wallets no carga (CDN bloqueado, sin internet), este aviso reemplaza al botón muerto.
+document.getElementById("btnEntrar").onclick = function(){
+  document.getElementById("errorEntrada").textContent = "No cargó el módulo de wallets. Recarga la página; si sigue igual, revisa tu conexión (F12 → Consola).";
+};
+</script>
 <script type="module">
 import { StellarWalletsKit } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/sdk";
-import { defaultModules } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/utils";
+import { AlbedoModule } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/albedo";
+import { xBullModule } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/xbull";
+import { FreighterModule } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/freighter";
+import { LobstrModule } from "https://esm.sh/@creit.tech/stellar-wallets-kit@2.8.0/modules/lobstr";
 
 const CFG = window.WEFEE_CONFIG || {};
 const CONTRACT_ID = (CFG.CONTRACT_ID || "").trim();
@@ -206,7 +215,7 @@ const SEED = Array.isArray(CFG.SEED_OFERTAS) ? CFG.SEED_OFERTAS : [];
 const PASS = StellarSdk.Networks.TESTNET;
 const EXPERT = "https://stellar.expert/explorer/testnet";
 
-StellarWalletsKit.init({ modules: defaultModules(), network: PASS });
+StellarWalletsKit.init({ modules: [new AlbedoModule(), new xBullModule(), new FreighterModule(), new LobstrModule()], network: PASS });
 const horizon = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
 const rpc = new StellarSdk.rpc.Server("https://soroban-testnet.stellar.org");
 
